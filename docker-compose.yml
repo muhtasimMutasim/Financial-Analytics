@@ -3,29 +3,33 @@
 services:
   
   postgres:
-    image: postgres:latest
+    # image: postgres:latest
+    build:
+      context: "./postgres-db"
     container_name: postgres-db
     restart: always
     volumes:
       - ./postgres-db/postgres_volume:/usr/local/pgsql/data
-      - ./postgres-db/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "127.0.0.1:3321:3305"
+      - "127.0.0.1:5433:5432"
     networks:
       - local-net
 
   api:
     build: ./api
     container_name: fastapi-backend
+    restart: always
     environment:
       PORT: 8000
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - '127.0.0.1:3000:8000'
-    restart: always
     depends_on: # defines startup and shutdown dependencies between services.
       - postgres-db
     networks:
