@@ -1,6 +1,8 @@
 import traceback
 import json
 import os
+import time
+import datetime
 import sys
 import logging
 import asyncio
@@ -95,7 +97,6 @@ class StockAPIClientBase:
                     return await resp.text()
                 return await resp.json()
 
-
         except Exception as exc:
             _type, value, _traceback = sys.exc_info()
             logging.error(traceback.format_exc())
@@ -116,10 +117,10 @@ class StockAPIClientBase:
     async def _get_ticker_statistics_json_data(self, ticker:str):
         """ Gets ticker quote. """
         
-        html_data = await self._get_ticker_quote_html(ticker=ticker)
+        html_data = await self._get_ticker_statistics_html(ticker=ticker)
 
         if "QuoteSummaryStore" not in html_data:
-            html_data = await self._get_ticker_quote_html(ticker=ticker)
+            html_data = await self._get_ticker_statistics_html(ticker=ticker)
             if "QuoteSummaryStore" not in html_data:
                 return {}
 
@@ -128,73 +129,72 @@ class StockAPIClientBase:
         
     
 
-    def _get_history(self, period="1mo", interval="1d",
+    async def _get_history(self, ticker:str=None, period="1mo", interval="1d",
                 start=None, end=None, prepost=False, actions=True,
                 auto_adjust=True, back_adjust=False,
                 proxy=None, rounding=False, tz=None, timeout=None, **kwargs):
 
         if start or period is None or period.lower() == "max":
             if end is None:
-                end = int(_time.time())
-            elif isinstance(end, _datetime.datetime):
-                end = int(_time.mktime(end.timetuple()))
+                end = int(time.time())
+            elif isinstance(end, datetime.datetime):
+                end = int(time.mktime(end.timetuple()))
             else:
-                end = int(_time.mktime(_time.strptime(str(end), '%Y-%m-%d'))) 
+                end = int(time.mktime(time.strptime(str(end), '%Y-%m-%d'))) 
             if start is None:
                 if interval=="1m":
                     start = end - 604800 # Subtract 7 days 
                 else:
                     start = -631159200
-            elif isinstance(start, _datetime.datetime):
-                start = int(_time.mktime(start.timetuple()))
+            elif isinstance(start, datetime.datetime):
+                start = int(time.mktime(start.timetuple()))
             else:
-                start = int(_time.mktime(
-                    _time.strptime(str(start), '%Y-%m-%d')))
+                start = int(time.mktime(
+                    time.strptime(str(start), '%Y-%m-%d')))
             params = {"period1": start, "period2": end}
         else:
             period = period.lower()
             params = {"range": period}
 
         params["interval"] = interval.lower()
-        params["includePrePost"] = prepost
+        params["includePrePost"] = str(prepost).lower()
         params["events"] = "div,splits"
 
         # 1) fix weired bug with Yahoo! - returning 60m for 30m bars
         if params["interval"] == "30m":
             params["interval"] = "15m"
 
-        # setup proxy in requests format
-        if proxy is not None:
-            if isinstance(proxy, dict) and "https" in proxy:
-                proxy = proxy["https"]
-            proxy = {"https": proxy}
+        # # setup proxy in requests format
+        # if proxy is not None:
+        #     if isinstance(proxy, dict) and "https" in proxy:
+        #         proxy = proxy["https"]
+        #     proxy = {"https": proxy}
 
         # Getting data from json
-        url = "{}/v8/finance/chart/{}".format(self._base_url, self.ticker)
+        # url = "{}/v8/finance/chart/{}".format(self._base_url, self.ticker)
 
-        data = None
 
         try:
-            data = session.get(
-                url=url,
-                params=params,
-                proxies=proxy,
-                headers=utils.user_agent_headers,
-                timeout=timeout
-            )
-            if "Will be right back" in data.text or data is None:
+            print(f"\n\n\n\n\n{json.dumps(params, indent=4)}\n\n\n\n")
+            endpoint = "/v8/finance/chart/"+ticker
+            # data = await self._get_req(endpoint=endpoint, params=params, only_text=True)
+            data = await self._get_req(endpoint=endpoint, params=params)
+            data_str = json.dumps(data)
+
+            if "Will be right back" in data_str or data_str is None:
                 raise RuntimeError("*** YAHOO! FINANCE IS CURRENTLY DOWN! ***\n"
                                    "Our engineers are working quickly to resolve "
                                    "the issue. Thank you for your patience.")
+            return data
 
-            data = data.json()
-        except Exception:
+        except Exception as exc:
+            _type, value, _traceback = sys.exc_info()
+            logging.error(traceback.format_exc())
+            _error_mess = f"\nError: {_type}  Value:{value}\n{_traceback}\n"
+            print(_error_mess)
+            print(traceback.print_exc())
             pass
-
-        # Work with errors
-        debug_mode = True
-        if "debug" in kwargs and isinstance(kwargs["debug"], bool):
-            debug_mode = kwargs["debug"]
+            
 
 
     def _get_single_ticker_json_data( self,
@@ -210,9 +210,32 @@ class StockAPIClientBase:
     def _get_statistics( self, ticker:str=None):
         """ Search Stock ticker and get response with 
             relevant info response. """
-        return self.loop.run_until_complete(
-               self._get_ticker_quote_json_data(ticker=ticker))
+        try:
+            return self.loop.run_until_complete(
+                self._get_ticker_statistics_html(ticker=ticker))
+
+        except Exception as exc:
+            _type, value, _traceback = sys.exc_info()
+            logging.error(traceback.format_exc())
+            _error_mess = f"\nError: {_type}  Value:{value}\n{_traceback}\n"
+            print(_error_mess)
+            print(traceback.print_exc())
+
+
+    def _get_current_price( self, ticker:str=None, 
+                period:str='5d', interval:str='1m'):
+        """ Get current price of Stock ticker. """
+        try:
+            return self.loop.run_until_complete(
+                self._get_history(ticker=ticker, period=period, interval=interval))
         
+        except Exception as exc:
+            _type, value, _traceback = sys.exc_info()
+            logging.error(traceback.format_exc())
+            _error_mess = f"\nError: {_type}  Value:{value}\n{_traceback}\n"
+            print(_error_mess)
+            print(traceback.print_exc())
+
 
     def _search_ticker( self, ticker:str=None):
         """ Search Stock ticker and get response with 

@@ -21,9 +21,10 @@ def test():
     ticker = "TSLA"
     api = StockAPIClientBase()
     # stock = api._search_ticker(ticker="TSLA")
-    stock = api._get_statistics(ticker=ticker)
-    print(f"\n\n\n{json.dumps(stock, indent=4)}\n\n\n")
-
+    # stock = api._get_statistics(ticker=ticker)
+    # print(f"\n\n\n{json.dumps(stock, indent=4)}\n\n\n")
+    current_price = api._get_current_price(ticker=ticker)
+    print(f"\n\n\n{json.dumps(current_price, indent=4)}\n\n\n")
 
 
 
