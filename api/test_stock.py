@@ -18,8 +18,9 @@ _logger.info('App started in %s', os.getcwd())
 
 def test():
 
-    stock = StockAPIClientBase().get_ticker_data(ticker="TSLA")
-    print(f"\n\n\n{stock}\n\n\n")
+    api = StockAPIClientBase()
+    stock = api._search_ticker(ticker="TSLA")
+    print(f"\n\n\n{json.dumps(stock, indent=4)}\n\n\n")
 
 
 
