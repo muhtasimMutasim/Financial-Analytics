@@ -18,8 +18,10 @@ _logger.info('App started in %s', os.getcwd())
 
 def test():
 
+    ticker = "TSLA"
     api = StockAPIClientBase()
-    stock = api._search_ticker(ticker="TSLA")
+    # stock = api._search_ticker(ticker="TSLA")
+    stock = api._get_statistics(ticker=ticker)
     print(f"\n\n\n{json.dumps(stock, indent=4)}\n\n\n")
 
 
