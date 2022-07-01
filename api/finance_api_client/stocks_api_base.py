@@ -38,7 +38,6 @@ class StockAPIClientBase:
         self._client_session = aiohttp.ClientSession(raise_for_status=True)
         self.loop = asyncio.get_event_loop()
 
-
     async def _close_client(self):
         return await self._client_session.close()
 
@@ -123,11 +122,9 @@ class StockAPIClientBase:
             html_data = await self._get_ticker_statistics_html(ticker=ticker)
             if "QuoteSummaryStore" not in html_data:
                 return {}
-
         data = TickerResponseParser.get_json(html=html_data)
         return data
         
-    
 
     async def _get_history(self, ticker:str=None, period="1mo", interval="1d",
                 start=None, end=None, prepost=False, actions=True,
@@ -164,18 +161,8 @@ class StockAPIClientBase:
         if params["interval"] == "30m":
             params["interval"] = "15m"
 
-        # # setup proxy in requests format
-        # if proxy is not None:
-        #     if isinstance(proxy, dict) and "https" in proxy:
-        #         proxy = proxy["https"]
-        #     proxy = {"https": proxy}
-
-        # Getting data from json
-        # url = "{}/v8/finance/chart/{}".format(self._base_url, self.ticker)
-
-
         try:
-            print(f"\n\n\n\n\n{json.dumps(params, indent=4)}\n\n\n\n")
+            # print(f"\n\n\n\n\n{json.dumps(params, indent=4)}\n\n\n\n")
             endpoint = "/v8/finance/chart/"+ticker
             # data = await self._get_req(endpoint=endpoint, params=params, only_text=True)
             data = await self._get_req(endpoint=endpoint, params=params)
@@ -194,7 +181,6 @@ class StockAPIClientBase:
             print(_error_mess)
             print(traceback.print_exc())
             pass
-            
 
 
     def _get_single_ticker_json_data( self,
