@@ -3,16 +3,33 @@ import json
 import os
 import sys
 from dotenv import load_dotenv;
-from custom_logger import _init_logger
 from finance_api_client import StockAPIClientBase
 
 
 load_dotenv(dotenv_path="../.env")
 os.environ['PARENT_LOGGER'] = 'stock_async_api'
 
-__default_logger, __default_logger_name = _init_logger()
-_logger = logging.getLogger(__default_logger_name)
-_logger.info('App started in %s', os.getcwd())
+
+
+########## Logging Information  ##########
+_logger_name_ = 'stock-client-api-test'
+_logger_level_ = logging.INFO
+try:
+    _logger_file_path = f'logs/{_logger_name_}_logs.log'
+    _logger = logging.getLogger(_logger_name_)
+    # handler = logging.FileHandler(_logger_file_path)
+    handler = logging.FileHandler(_logger_file_path, mode='w')
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    
+    _logger.setLevel(_logger_level_)
+    _logger.addHandler(handler)
+
+except:
+    __logger_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    logging.basicConfig(level=_logger_level_, format=__logger_format)
+    _logger = logging.getLogger(__name__)
+    _logger.setLevel(_logger_level_)
 
 
 

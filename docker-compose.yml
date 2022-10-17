@@ -3,9 +3,8 @@
 services:
   
   postgres:
-    # image: postgres:latest
-    build:
-      context: "./postgres-db"
+    image: postgres:latest
+    # build: ./postgres-db
     container_name: postgres-db
     restart: always
     volumes:
@@ -28,6 +27,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      SQLALCHEMY_DATABASE_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/${POSTGRES_DB}
     ports:
       - '127.0.0.1:3000:8000'
     depends_on: # defines startup and shutdown dependencies between services.

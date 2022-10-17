@@ -2,11 +2,6 @@ import logging
 import json
 import re
 
-from custom_logger import _module_logger_init as _init_logger
-
-__logger_name = _init_logger(logger_name="stock-api-client")
-_logger = logging.getLogger(__logger_name)
-
 
 
 class TickerResponseParser:

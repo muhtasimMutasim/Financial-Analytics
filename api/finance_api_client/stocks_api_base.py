@@ -7,8 +7,6 @@ import sys
 import logging
 import asyncio
 
-from custom_logger import _module_logger_init as _init_logger
-
 from requests import Response
 import aiohttp
 # from aiohttp import
@@ -18,10 +16,25 @@ from pydantic import ValidationError
 from .api_parser import TickerResponseParser
 
 
-__logger_name = _init_logger(logger_name="stock-api-client")
-_logger = logging.getLogger(__logger_name)
+########## Logging Information  ##########
+_logger_name_ = 'stock-client-api'
+_logger_level_ = logging.INFO
+try:
+    _logger_file_path = f'logs/{_logger_name_}_logs.log'
+    _logger = logging.getLogger(_logger_name_)
+    # handler = logging.FileHandler(_logger_file_path)
+    handler = logging.FileHandler(_logger_file_path, mode='w')
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    
+    _logger.setLevel(_logger_level_)
+    _logger.addHandler(handler)
 
-
+except:
+    __logger_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    logging.basicConfig(level=_logger_level_, format=__logger_format)
+    _logger = logging.getLogger(__name__)
+    _logger.setLevel(_logger_level_)
 
 
 class StockAPIClientBase:
@@ -81,10 +94,11 @@ class StockAPIClientBase:
 
 
     async def _get_req(self, endpoint: str,
-        headers: Optional[Dict] = None,
-        params: Optional[Dict] = None,
-        base_url:str=None,
-        only_text:bool=False):
+            headers: Optional[Dict] = None,
+            params: Optional[Dict] = None,
+            base_url:str=None,
+            only_text:bool=False
+    ):
         """  Function for GET call. """
         try:
             headers = self.user_agent_headers if headers is None else headers
@@ -126,10 +140,13 @@ class StockAPIClientBase:
         return data
         
 
-    async def _get_history(self, ticker:str=None, period="1mo", interval="1d",
-                start=None, end=None, prepost=False, actions=True,
-                auto_adjust=True, back_adjust=False,
-                proxy=None, rounding=False, tz=None, timeout=None, **kwargs):
+    async def _get_history(self, 
+            ticker:str=None, period="1mo", interval="1d",
+            start=None, end=None, prepost=False, actions=True,
+            auto_adjust=True, back_adjust=False,
+            proxy=None, rounding=False, 
+            tz=None, timeout=None, **kwargs
+    ):
 
         if start or period is None or period.lower() == "max":
             if end is None:
@@ -193,7 +210,9 @@ class StockAPIClientBase:
         )
 
 
-    def _get_statistics( self, ticker:str=None):
+    def _get_statistics( self,
+             ticker:str=None
+    ):
         """ Search Stock ticker and get response with 
             relevant info response. """
         try:
@@ -208,8 +227,11 @@ class StockAPIClientBase:
             print(traceback.print_exc())
 
 
-    def _get_current_price( self, ticker:str=None, 
-                period:str='5d', interval:str='1m'):
+    def _get_current_price( self,
+            ticker:str=None, 
+            period:str='5d', 
+            interval:str='1m'
+    ):
         """ Get current price of Stock ticker. """
         try:
             return self.loop.run_until_complete(
