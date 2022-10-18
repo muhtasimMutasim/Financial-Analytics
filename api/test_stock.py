@@ -52,17 +52,15 @@ def test():
     # print(f"\n\n\n{json.dumps(current_price, indent=4)}\n\n\n")
     # print(  f"\n\n{ json.dumps(current_price.dict(), indent=4, default=str)   }\n\n"  )
     
-    price = StockAPIClientBase(ticker=ticker).current_price()
+    price = StockAPIClientBase(ticker=ticker).current_price
     print(f"\n\nCurrent Price:   {price} \n\n")
+
 
 
 def main():
     """ Main function. """
-    asyncio.run(
-        test()
-    )
+    test()
 
 
 if __name__ == "__main__":
-    # main()
-    test()
+    main()

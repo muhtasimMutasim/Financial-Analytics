@@ -251,30 +251,26 @@ class StockAPIClientBase:
         model = await self._parse_model(response=resp, model=TickerHistoryModel)
         return model
 
-
-    async def _get_current_price( self,
+    
+    async def _get_ticker_meta( self,
             ticker:str=None, 
             period:str='1d', 
             interval:str='1m'
     ) -> TickerHistoryModel:
-        """ Get current price of Stock ticker. """
-        # return self.loop.run_until_complete()
+        """ Get meta data of Stock ticker. """
+
         if not ticker:
             ticker = self._ticker
-        # _current = await self._get_history(ticker=ticker, period=period, interval=interval)
-        # _current = self.loop.run_until_complete(  self._get_history(ticker=ticker, period=period, interval=interval).chart.result[0].meta.regularMarketPrice  )
         _current = await self._get_history(ticker=ticker, period=period, interval=interval)
-        return _current.chart.result[0].meta.regularMarketPrice 
-    
+        return _current.chart.result[0].meta 
 
+
+    @property
     def current_price(self):
-        # current_price = await self._get_current_price(ticker=ticker).result[0].meta.regularMarketPrice
-        # current_price = asyncio.run( self._get_current_price().chart.result[0].meta.regularMarketPrice )
-        # return self._get_current_price()
+        """ Property function returns current regular market value of Ticker. """
         return self.loop.run_until_complete(
-            self._get_current_price()
-        )
-        # return self._get_current_price()
+            self._get_ticker_meta()
+        ).regularMarketPrice 
 
     
 
