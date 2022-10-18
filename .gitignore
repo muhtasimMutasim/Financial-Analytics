@@ -156,3 +156,30 @@ Thumbs.db
 
 ### dotenv ###
 .env
+
+
+#######################  Personalized Files  #######################
+
+#### logs ####
+**/*.log
+**/logs
+**/logs/*
+
+#### vscode ####
+**/.vscode
+**/*/.vscode
+**/*/.vscode/*
+
+
+##### All Folders with input and output data. ####
+**/output_data
+**/output_data/*
+
+**/input_data
+**/input_data/*
+
+
+
+
+
+

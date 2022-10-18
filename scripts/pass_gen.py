@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-l','--len', type=int, help='Required for length of password.', required=True)
 args = parser.parse_args()
 
-symbols = "!@$" * 5
+symbols = "!@" * 5
 characters = list(string.ascii_letters + string.digits + symbols)
 
 

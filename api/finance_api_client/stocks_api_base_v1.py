@@ -7,8 +7,7 @@ import sys
 import logging
 import asyncio
 
-import requests as _requests
-from requests import Response, Session
+from requests import Response
 import aiohttp
 from typing import Dict, List, Optional
 from pydantic import ValidationError, validator
@@ -16,7 +15,7 @@ from pydantic import ValidationError, validator
 from .api_parser import TickerResponseParser
 
 ######## Import Models  ########
-from .models.current_price_model import TickerHistoryModel
+from models.current_price_model import *
 
 
 
@@ -26,8 +25,8 @@ _logger_level_ = logging.INFO
 try:
     _logger_file_path = f'logs/{_logger_name_}_logs.log'
     _logger = logging.getLogger(_logger_name_)
-    handler = logging.FileHandler(_logger_file_path)
-    # handler = logging.FileHandler(_logger_file_path, mode='w')
+    # handler = logging.FileHandler(_logger_file_path)
+    handler = logging.FileHandler(_logger_file_path, mode='w')
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     
@@ -41,27 +40,23 @@ except:
     _logger.setLevel(_logger_level_)
 
 
-class StockAPIURLS:
-    QUOTE_URL = 'https://finance.yahoo.com'
-    QUERY2_URL = 'https://query2.finance.yahoo.com'
-
 
 class StockAPIClientBase:
 
-    def __init__(self, ticker:str=None):
-        self.quote_url = StockAPIURLS.QUOTE_URL
-        self.query_url = StockAPIURLS.QUERY2_URL
+    def __init__(self):
+        self._base_url_ = 'https://query2.finance.yahoo.com'
+        # self._scrape_url_ = 'https://finance.yahoo.com/quote'
+        self._root_url_ = 'https://finance.yahoo.com'
         
         self.user_agent_headers = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
         self.headers = {"Accept": "application/json", "Content-Type": "application/json" }
         
-        ### Initialize Session
-        self._session = Session()
-
-        #### Ticker Information
-        self._ticker = ticker
+        self._client_session = aiohttp.ClientSession(raise_for_status=True)
         self.loop = asyncio.get_event_loop()
+
+    async def _close_client(self):
+        return await self._client_session.close()
 
 
     def __del__(self):
@@ -69,7 +64,7 @@ class StockAPIClientBase:
         A destructor is provided to ensure that the client and the event loop are closed at exit.
         """
         # Use the loop to call async close, then stop/close loop.
-        # self.loop.run_until_complete(self._close_client())
+        self.loop.run_until_complete(self._close_client())
         self.loop.close()
 
 
@@ -87,40 +82,37 @@ class StockAPIClientBase:
         Return the response if it has a correct status code
         otherwise it raise an Exception.
         """
-        if response.status_code > 299:
-            error = _requests.HTTPError(response)
+        if response.status > 299:
+            error = await aiohttp.ClientError(response)
             _logger.error(error)
             if raise_error:
                 raise error
-
-        response_json_str = json.dumps(response.json())
-
-        if "Will be right back" in response_json_str or response_json_str is None:
-            raise RuntimeError("*** YAHOO! FINANCE IS CURRENTLY DOWN! ***\n"
-                                "Our engineers are working quickly to resolve "
-                                "the issue. Thank you for your patience.")
         return response
 
 
-    async def _get_request(self, 
+    async def _post_req(self, 
+            endpoint:str,
+            data:str, 
+            headers: Optional[Dict] = None
+    ):
+        # No use for post requests as of now.
+        """  Function for POST call. """
+        pass
+
+
+    async def _get_request_v1(self, endpoint: str,
             base_url:str=None,
-            endpoint: str = None,
             headers: Optional[Dict] = None,
             params: Optional[Dict] = None,
-    ) -> Response:
+    ):
         """  Function for GET call. """
         
         headers = self.user_agent_headers if headers is None else headers
         url = self.url_from_endpoint(_base_url=base_url, endpoint=endpoint)
         
-        ### Currently implementing sessions instead of requests.
-        # response = _requests.get(
-        response = self._session.get(
-            url=url,
-            headers=headers,
-            params=params        
-        )
-        return response
+        async with self._client_session.get(url=url, headers=headers, params=params) as resp:
+            # await self._process_response(response=resp)
+            return await resp
 
     
     async def _parse_model(self,
@@ -132,7 +124,6 @@ class StockAPIClientBase:
             return model(**response.json())
         except ValidationError as vr:
             _mess = f"\nData was not parsed correctly with model, check data:\n{vr}\n"
-            _logger.error(_mess)
 
 
     async def _get_ticker_statistics_html(self, ticker:str):
@@ -141,7 +132,7 @@ class StockAPIClientBase:
         endpoint = "/quote/"+ticker
         html_data = await self._get_request(
             base_url=base_url, endpoint=endpoint)
-        html_data = html_data.text
+        html_data = html_data.text()
         return html_data
     
 
@@ -156,52 +147,7 @@ class StockAPIClientBase:
                 return {}
         data = TickerResponseParser.get_json(html=html_data)
         return data
-
-
-    def _get_single_ticker_json_data( self,
-        endpoint:str=None,
-        params: Optional[Dict] = None,
-    ):
-        """ Make request to get Stock ticker. """
-        return self.loop.run_until_complete(
-                self._get_request(endpoint=endpoint, params=params)
-        )
-
-
-    def _get_statistics( self,
-             ticker:str=None
-    ):
-        """ Search Stock ticker and get response with 
-            relevant info response. """
-        try:
-            return self.loop.run_until_complete(
-                self._get_ticker_statistics_html(ticker=ticker)
-            )
-
-        except Exception as exc:
-            _type, value, _traceback = sys.exc_info()
-            logging.error(traceback.format_exc())
-            _error_mess = f"\nError: {_type}  Value:{value}\n{_traceback}\n"
-            print(_error_mess)
-            print(traceback.print_exc())
-       
-
-    def _search_ticker( self, ticker:str=None):
-        """ Search Stock ticker and get response with 
-            relevant info response. """
-        endpoint = "/v1/finance/search"
-        params = { "q": ticker.strip() }
-        return self._get_single_ticker_json_data(
-                    endpoint=endpoint, params=params 
-            )
-
-
-    def _get_multiple_tickers_json_data(
-        self,
-        tickers:List[str]=[]
-    ):
-        """ Function for getting multiple tickers. """
-
+        
 
     async def _get_history(self, 
             ticker:str=None, period="1mo", interval="1d",
@@ -209,7 +155,7 @@ class StockAPIClientBase:
             auto_adjust=True, back_adjust=False,
             proxy=None, rounding=False, 
             tz=None, timeout=None, **kwargs
-    ) -> TickerHistoryModel:
+    ):
         """ Function to get stock history """
         if start or period is None or period.lower() == "max":
             if end is None:
@@ -241,38 +187,91 @@ class StockAPIClientBase:
         if params["interval"] == "30m":
             params["interval"] = "15m"
 
-        _base_url = self.query_url
-        endpoint = "/v8/finance/chart/"+ticker
-        resp = await self._get_request(base_url=_base_url, endpoint=endpoint, params=params)
-        await self._process_response(response=resp)
-        
-        _logger.debug(  f"\n\n{ json.dumps(resp.json(), indent=4, default=str)   }\n\n"    )
+        try:
+            endpoint = "/v8/finance/chart/"+ticker
+            data = await self._get_request(endpoint=endpoint, params=params)
+            data_str = json.dumps(data)
 
-        model = await self._parse_model(response=resp, model=TickerHistoryModel)
-        return model
+            if "Will be right back" in data_str or data_str is None:
+                raise RuntimeError("*** YAHOO! FINANCE IS CURRENTLY DOWN! ***\n"
+                                   "Our engineers are working quickly to resolve "
+                                   "the issue. Thank you for your patience.")
+            return data
 
-    
-    async def _get_ticker_meta( self,
-            ticker:str=None, 
-            period:str='1d', 
-            interval:str='1m'
-    ) -> TickerHistoryModel:
-        """ Get meta data of Stock ticker. """
-
-        if not ticker:
-            ticker = self._ticker
-        _current = await self._get_history(ticker=ticker, period=period, interval=interval)
-        return _current.chart.result[0].meta 
+        except Exception as exc:
+            _type, value, _traceback = sys.exc_info()
+            logging.error(traceback.format_exc())
+            _error_mess = f"\nError: {_type}  Value:{value}\n{_traceback}\n"
+            print(_error_mess)
+            print(traceback.print_exc())
+            pass
 
 
-    @property
-    def current_price(self):
-        """ Property function returns current regular market value of Ticker. """
+    def _get_single_ticker_json_data( self,
+        endpoint:str=None,
+        params: Optional[Dict] = None,
+    ):
+        """ Make request to get Stock ticker. """
         return self.loop.run_until_complete(
-            self._get_ticker_meta()
-        ).regularMarketPrice 
+                self._get_request(endpoint=endpoint, params=params)
+        )
 
-    
+
+    def _get_statistics( self,
+             ticker:str=None
+    ):
+        """ Search Stock ticker and get response with 
+            relevant info response. """
+        try:
+            return self.loop.run_until_complete(
+                self._get_ticker_statistics_html(ticker=ticker)
+            )
+
+        except Exception as exc:
+            _type, value, _traceback = sys.exc_info()
+            logging.error(traceback.format_exc())
+            _error_mess = f"\nError: {_type}  Value:{value}\n{_traceback}\n"
+            print(_error_mess)
+            print(traceback.print_exc())
+
+
+    async def _get_current_price( self,
+            ticker:str=None, 
+            period:str='2d', 
+            interval:str='1m'
+    ):
+        """ Get current price of Stock ticker. """
+        try:
+            # return self.loop.run_until_complete()
+            _current = await self._get_history(ticker=ticker, period=period, interval=interval)
+            
+        
+        except Exception as exc:
+            _type, value, _traceback = sys.exc_info()
+            logging.error(traceback.format_exc())
+            _error_mess = f"\nError: {_type}  Value:{value}\n{_traceback}\n"
+            print(_error_mess)
+            print(traceback.print_exc())
+
+
+    def _search_ticker( self, ticker:str=None):
+        """ Search Stock ticker and get response with 
+            relevant info response. """
+        endpoint = "/v1/finance/search"
+        params = { "q": ticker.strip() }
+        return self._get_single_ticker_json_data(
+                    endpoint=endpoint, params=params 
+            )
+
+
+    def _get_multiple_tickers_json_data(
+        self,
+        tickers:List[str]=[]
+    ):
+        """ Function for getting multiple tickers. """
+
+
+
 
 
 
