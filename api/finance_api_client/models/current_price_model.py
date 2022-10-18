@@ -9,38 +9,30 @@ from typing import Any, List, Optional
 from pydantic import BaseModel, validator
 
 
-class Pre(BaseModel):
-    timezone: Optional[str] = None
-    start: Optional[int] = None
-    end: Optional[int] = None
-    gmtoffset: Optional[int] = None
+########  Helper Functions  ########
 
+def convert_to_ts(seconds:int = None):
+    """ 
+    Function will take in variable named seconds as arg 
+    and return datetime object in return  """
+    return datetime.fromtimestamp(seconds)
 
-class Regular(BaseModel):
-    timezone: Optional[str] = None
-    start: Optional[int] = None
-    end: Optional[int] = None
-    gmtoffset: Optional[int] = None
-
-
-class Post(BaseModel):
-    timezone: Optional[str] = None
-    start: Optional[int] = None
-    end: Optional[int] = None
-    gmtoffset: Optional[int] = None
-
-
-class CurrentTradingPeriod(BaseModel):
-    pre: Optional[Pre] = None
-    regular: Optional[Regular] = None
-    post: Optional[Post] = None
 
 
 class TradingPeriod(BaseModel):
     timezone: Optional[str] = None
-    start: Optional[int] = None
-    end: Optional[int] = None
+    start: Optional[datetime] = None
+    end: Optional[datetime] = None
     gmtoffset: Optional[int] = None
+
+    @validator("start", "end", pre=True)
+    def _convert_seconds_to_timestamp(cls, value):
+        return convert_to_ts(seconds=value)
+
+class CurrentTradingPeriod(BaseModel):
+    pre: Optional[TradingPeriod] = None
+    regular: Optional[TradingPeriod] = None
+    post: Optional[TradingPeriod] = None
 
 
 class Meta(BaseModel):
@@ -48,8 +40,8 @@ class Meta(BaseModel):
     symbol: Optional[str] = None
     exchangeName: Optional[str] = None
     instrumentType: Optional[str] = None
-    firstTradeDate: Optional[int] = None
-    regularMarketTime: Optional[int] = None
+    firstTradeDate: Optional[datetime] = None
+    regularMarketTime: Optional[datetime] = None
     gmtoffset: Optional[int] = None
     timezone: Optional[str] = None
     exchangeTimezoneName: Optional[str] = None
@@ -63,6 +55,11 @@ class Meta(BaseModel):
     dataGranularity: Optional[str] = None
     range: Optional[str] = None
     validRanges: Optional[List[str]] = None
+
+
+    @validator("firstTradeDate", "regularMarketTime", pre=True)
+    def _convert_seconds_to_timestamp(cls, value):
+        return convert_to_ts(seconds=value)
 
 
 class QuoteItem(BaseModel):
@@ -79,17 +76,12 @@ class Indicators(BaseModel):
 
 class ResultItem(BaseModel):
     meta: Optional[Meta] = None
-    timestamp: Optional[List[int]] = None
+    timestamp: Optional[List[datetime]] = None
     indicators: Optional[Indicators] = None
 
     @validator("timestamp", pre=True)
-    def parse_for_seconds_timestamp(cls, value):
-        _final = []
-        for _ts in value:
-            _final.append(
-                datetime.fromtimestamp(_ts)
-            )
-        return _final
+    def _convert_seconds_to_timestamp(cls, values):
+        return [ convert_to_ts(seconds=_ts) for _ts in values  ]
 
 
 class Chart(BaseModel):
@@ -97,5 +89,5 @@ class Chart(BaseModel):
     error: Optional[Any] = None
 
 
-class Model(BaseModel):
-    chart: Optional[Chart] = None
+class TickerHistoryModel(BaseModel):
+    chart: Optional[Chart]

@@ -1,14 +1,21 @@
+
+######  Standard Libraries ######
 import logging
 import json
 import os
 import sys
+import asyncio
+
+
+######  3rd party libraries  ######
 from dotenv import load_dotenv;
+
+
+######  Local Libraries.  ######
 from finance_api_client import StockAPIClientBase
 
 
 load_dotenv(dotenv_path="../.env")
-os.environ['PARENT_LOGGER'] = 'stock_async_api'
-
 
 
 ########## Logging Information  ##########
@@ -33,21 +40,24 @@ except:
 
 
 
-def test():
+async def test():
 
     ticker = "TSLA"
     api = StockAPIClientBase()
     # stock = api._search_ticker(ticker="TSLA")
     # stock = api._get_statistics(ticker=ticker)
     # print(f"\n\n\n{json.dumps(stock, indent=4)}\n\n\n")
-    current_price = api._get_current_price(ticker=ticker)
-    print(f"\n\n\n{json.dumps(current_price, indent=4)}\n\n\n")
+    current_price = await api._get_current_price(ticker=ticker)
+    # print(f"\n\n\n{json.dumps(current_price, indent=4)}\n\n\n")
+    print(  f"\n\n{ json.dumps(current_price.dict(), indent=4, default=str)   }\n\n"  )
 
 
 
 def main():
     """ Main function. """
-    test()
+    asyncio.run(
+        test()
+    )
 
 
 if __name__ == "__main__":
