@@ -49,6 +49,8 @@ class StockAPIURLS:
 class StockAPIClientBase:
 
     def __init__(self, ticker:str=None):
+
+        ######  URLS ######
         self.quote_url = StockAPIURLS.QUOTE_URL
         self.query_url = StockAPIURLS.QUERY2_URL
         
@@ -56,20 +58,20 @@ class StockAPIClientBase:
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
         self.headers = {"Accept": "application/json", "Content-Type": "application/json" }
         
-        ### Initialize Session
+        ######  Asyncio Event Loop  ######
+        self.loop = asyncio.get_event_loop()
+
+        ### Initialize Session  ######
         self._session = Session()
 
-        #### Ticker Information
+        #### Ticker Information  ######
         self._ticker = ticker
-        self.loop = asyncio.get_event_loop()
 
 
     def __del__(self):
         """
         A destructor is provided to ensure that the client and the event loop are closed at exit.
         """
-        # Use the loop to call async close, then stop/close loop.
-        # self.loop.run_until_complete(self._close_client())
         self.loop.close()
 
 
@@ -114,7 +116,6 @@ class StockAPIClientBase:
         url = self.url_from_endpoint(_base_url=base_url, endpoint=endpoint)
         
         ### Currently implementing sessions instead of requests.
-        # response = _requests.get(
         response = self._session.get(
             url=url,
             headers=headers,
