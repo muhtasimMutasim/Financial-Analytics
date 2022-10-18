@@ -9,12 +9,11 @@ import asyncio
 
 from requests import Response
 import aiohttp
-# from aiohttp import
 from typing import Dict, List, Optional
-from pydantic import ValidationError
+from pydantic import ValidationError, validator
 
 from .api_parser import TickerResponseParser
-
+from models.current_price_model import 
 
 ########## Logging Information  ##########
 _logger_name_ = 'stock-client-api'
@@ -86,8 +85,11 @@ class StockAPIClientBase:
         return response
 
 
-    async def _post_req(self, endpoint:str, data:str, 
-        headers: Optional[Dict] = None):
+    async def _post_req(self, 
+            endpoint:str,
+            data:str, 
+            headers: Optional[Dict] = None
+    ):
         # No use for post requests as of now.
         """  Function for POST call. """
         pass
@@ -117,6 +119,16 @@ class StockAPIClientBase:
             print(_error_mess)
             print(traceback.print_exc())
     
+    async def _parse_model(self,
+            response: Response,
+            model
+    ):
+        """ Parse Responses with Models. """
+        try:
+            return model(**response.json())
+        except ValidationError as vr:
+            _mess = f"\nData was not parsed correctly with model, check data:\n{vr}\n"
+
 
     async def _get_ticker_statistics_html(self, ticker:str):
         """ Gets ticker quote. """
@@ -147,7 +159,7 @@ class StockAPIClientBase:
             proxy=None, rounding=False, 
             tz=None, timeout=None, **kwargs
     ):
-
+        """ Function to get stock history """
         if start or period is None or period.lower() == "max":
             if end is None:
                 end = int(time.time())
@@ -179,9 +191,7 @@ class StockAPIClientBase:
             params["interval"] = "15m"
 
         try:
-            # print(f"\n\n\n\n\n{json.dumps(params, indent=4)}\n\n\n\n")
             endpoint = "/v8/finance/chart/"+ticker
-            # data = await self._get_req(endpoint=endpoint, params=params, only_text=True)
             data = await self._get_req(endpoint=endpoint, params=params)
             data_str = json.dumps(data)
 
@@ -217,7 +227,8 @@ class StockAPIClientBase:
             relevant info response. """
         try:
             return self.loop.run_until_complete(
-                self._get_ticker_statistics_html(ticker=ticker))
+                self._get_ticker_statistics_html(ticker=ticker)
+            )
 
         except Exception as exc:
             _type, value, _traceback = sys.exc_info()
@@ -229,13 +240,14 @@ class StockAPIClientBase:
 
     def _get_current_price( self,
             ticker:str=None, 
-            period:str='5d', 
+            period:str='2d', 
             interval:str='1m'
     ):
         """ Get current price of Stock ticker. """
         try:
             return self.loop.run_until_complete(
-                self._get_history(ticker=ticker, period=period, interval=interval))
+                self._get_history(ticker=ticker, period=period, interval=interval)
+            )
         
         except Exception as exc:
             _type, value, _traceback = sys.exc_info()
@@ -251,7 +263,8 @@ class StockAPIClientBase:
         endpoint = "/v1/finance/search"
         params = { "q": ticker.strip() }
         return self._get_single_ticker_json_data(
-               endpoint=endpoint, params=params )
+                    endpoint=endpoint, params=params 
+            )
 
 
     def _get_multiple_tickers_json_data(
