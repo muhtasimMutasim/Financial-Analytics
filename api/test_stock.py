@@ -40,17 +40,20 @@ except:
 
 
 
-async def test():
+def test():
 
     ticker = "TSLA"
-    api = StockAPIClientBase()
+    # api = StockAPIClientBase()
+
     # stock = api._search_ticker(ticker="TSLA")
     # stock = api._get_statistics(ticker=ticker)
     # print(f"\n\n\n{json.dumps(stock, indent=4)}\n\n\n")
-    current_price = await api._get_current_price(ticker=ticker)
+    # current_price = await api._get_current_price(ticker=ticker)
     # print(f"\n\n\n{json.dumps(current_price, indent=4)}\n\n\n")
-    print(  f"\n\n{ json.dumps(current_price.dict(), indent=4, default=str)   }\n\n"  )
-
+    # print(  f"\n\n{ json.dumps(current_price.dict(), indent=4, default=str)   }\n\n"  )
+    
+    price = StockAPIClientBase(ticker=ticker).current_price()
+    print(f"\n\nCurrent Price:   {price} \n\n")
 
 
 def main():
@@ -61,4 +64,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    test()

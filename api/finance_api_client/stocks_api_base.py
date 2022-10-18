@@ -48,7 +48,7 @@ class StockAPIURLS:
 
 class StockAPIClientBase:
 
-    def __init__(self):
+    def __init__(self, ticker:str=None):
         self.quote_url = StockAPIURLS.QUOTE_URL
         self.query_url = StockAPIURLS.QUERY2_URL
         
@@ -58,7 +58,20 @@ class StockAPIClientBase:
         
         ### Initialize Session
         self._session = Session()
-        
+
+        #### Ticker Information
+        self._ticker = ticker
+        self.loop = asyncio.get_event_loop()
+
+
+    def __del__(self):
+        """
+        A destructor is provided to ensure that the client and the event loop are closed at exit.
+        """
+        # Use the loop to call async close, then stop/close loop.
+        # self.loop.run_until_complete(self._close_client())
+        self.loop.close()
+
 
     def url_from_endpoint(self, endpoint: str=None, _base_url:str=None) -> str:
         if _base_url == None: _base_url = self._base_url_
@@ -87,7 +100,6 @@ class StockAPIClientBase:
                                 "Our engineers are working quickly to resolve "
                                 "the issue. Thank you for your patience.")
         return response
-
 
 
     async def _get_request(self, 
@@ -144,7 +156,52 @@ class StockAPIClientBase:
                 return {}
         data = TickerResponseParser.get_json(html=html_data)
         return data
-        
+
+
+    def _get_single_ticker_json_data( self,
+        endpoint:str=None,
+        params: Optional[Dict] = None,
+    ):
+        """ Make request to get Stock ticker. """
+        return self.loop.run_until_complete(
+                self._get_request(endpoint=endpoint, params=params)
+        )
+
+
+    def _get_statistics( self,
+             ticker:str=None
+    ):
+        """ Search Stock ticker and get response with 
+            relevant info response. """
+        try:
+            return self.loop.run_until_complete(
+                self._get_ticker_statistics_html(ticker=ticker)
+            )
+
+        except Exception as exc:
+            _type, value, _traceback = sys.exc_info()
+            logging.error(traceback.format_exc())
+            _error_mess = f"\nError: {_type}  Value:{value}\n{_traceback}\n"
+            print(_error_mess)
+            print(traceback.print_exc())
+       
+
+    def _search_ticker( self, ticker:str=None):
+        """ Search Stock ticker and get response with 
+            relevant info response. """
+        endpoint = "/v1/finance/search"
+        params = { "q": ticker.strip() }
+        return self._get_single_ticker_json_data(
+                    endpoint=endpoint, params=params 
+            )
+
+
+    def _get_multiple_tickers_json_data(
+        self,
+        tickers:List[str]=[]
+    ):
+        """ Function for getting multiple tickers. """
+
 
     async def _get_history(self, 
             ticker:str=None, period="1mo", interval="1d",
@@ -152,7 +209,7 @@ class StockAPIClientBase:
             auto_adjust=True, back_adjust=False,
             proxy=None, rounding=False, 
             tz=None, timeout=None, **kwargs
-    ):
+    ) -> TickerHistoryModel:
         """ Function to get stock history """
         if start or period is None or period.lower() == "max":
             if end is None:
@@ -192,67 +249,34 @@ class StockAPIClientBase:
         _logger.debug(  f"\n\n{ json.dumps(resp.json(), indent=4, default=str)   }\n\n"    )
 
         model = await self._parse_model(response=resp, model=TickerHistoryModel)
-
         return model
-
-
-    def _get_single_ticker_json_data( self,
-        endpoint:str=None,
-        params: Optional[Dict] = None,
-    ):
-        """ Make request to get Stock ticker. """
-        return self.loop.run_until_complete(
-                self._get_request(endpoint=endpoint, params=params)
-        )
-
-
-    def _get_statistics( self,
-             ticker:str=None
-    ):
-        """ Search Stock ticker and get response with 
-            relevant info response. """
-        try:
-            return self.loop.run_until_complete(
-                self._get_ticker_statistics_html(ticker=ticker)
-            )
-
-        except Exception as exc:
-            _type, value, _traceback = sys.exc_info()
-            logging.error(traceback.format_exc())
-            _error_mess = f"\nError: {_type}  Value:{value}\n{_traceback}\n"
-            print(_error_mess)
-            print(traceback.print_exc())
 
 
     async def _get_current_price( self,
             ticker:str=None, 
             period:str='1d', 
             interval:str='1m'
-    ):
+    ) -> TickerHistoryModel:
         """ Get current price of Stock ticker. """
         # return self.loop.run_until_complete()
+        if not ticker:
+            ticker = self._ticker
+        # _current = await self._get_history(ticker=ticker, period=period, interval=interval)
+        # _current = self.loop.run_until_complete(  self._get_history(ticker=ticker, period=period, interval=interval).chart.result[0].meta.regularMarketPrice  )
         _current = await self._get_history(ticker=ticker, period=period, interval=interval)
-        return _current
-        
+        return _current.chart.result[0].meta.regularMarketPrice 
+    
 
-    def _search_ticker( self, ticker:str=None):
-        """ Search Stock ticker and get response with 
-            relevant info response. """
-        endpoint = "/v1/finance/search"
-        params = { "q": ticker.strip() }
-        return self._get_single_ticker_json_data(
-                    endpoint=endpoint, params=params 
-            )
+    def current_price(self):
+        # current_price = await self._get_current_price(ticker=ticker).result[0].meta.regularMarketPrice
+        # current_price = asyncio.run( self._get_current_price().chart.result[0].meta.regularMarketPrice )
+        # return self._get_current_price()
+        return self.loop.run_until_complete(
+            self._get_current_price()
+        )
+        # return self._get_current_price()
 
-
-    def _get_multiple_tickers_json_data(
-        self,
-        tickers:List[str]=[]
-    ):
-        """ Function for getting multiple tickers. """
-
-
-
+    
 
 
 
