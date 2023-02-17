@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from requests import Request, Response, Session
 
 ### Local Libraries
-from custom_logger import get_logger
+# from ..
 
 """
 Four committees:
@@ -68,7 +68,7 @@ class SECApi:
     async def _process_response( cls,
         response: Response=None,
         raise_error:bool=True
-    ):
+    ) -> Response:
         """
         Return the response if it has a correct status code
         otherwise it raise an Exception.
@@ -123,7 +123,7 @@ class SECApi:
             count:str = 100,
             action:str = 'getcurrent',
                                            
-    ):
+    ) -> Response:
         """
             Function will return SEC fillings from the 
             SEC's EDGAR service. By Default it gets the latest.
@@ -140,16 +140,34 @@ class SECApi:
             'count': count,
             'action': action,
         }
-        response = cls._get_request(
+        headers = {"Accept": "application/json", "Content-Type": "text/html" }
+        resp: (Response) = await cls._get_request(
             base_url = SECUrls.CGI_BIN_URL,
             endpoint = endpoint,
-
+            params=params,
+            headers=headers
         )
+        resp = await cls._process_response(response=resp)
+        return resp
+
+
+    @classmethod
+    async def _scrape_sec_filings_search_results(cls):
+        """ Function will be scraping the SEC fillings page. """
+
+        sec_search_results = await cls._get_sec_filings()
+        results = sec_search_results.content
+        print(json.dumps(results, indent=4))
 
 
 
 def test():
-    pass
+    
+    asyncio.run(
+        SECApi._scrape_sec_filings_search_results()
+    )
+
+
 
 
 if __name__ == "__main__":
