@@ -44,7 +44,6 @@ def test():
 
     ticker = "TSLA"
     # api = StockAPIClientBase()
-
     # stock = api._search_ticker(ticker="TSLA")
     # stock = api._get_statistics(ticker=ticker)
     # print(f"\n\n\n{json.dumps(stock, indent=4)}\n\n\n")
@@ -57,9 +56,17 @@ def test():
 
 
 
+def test_senate_trading():
+    from finance_api_client import main_function
+    main_function()
+
+
+
 def main():
     """ Main function. """
-    test()
+    # test()
+    test_senate_trading()
+
 
 
 if __name__ == "__main__":

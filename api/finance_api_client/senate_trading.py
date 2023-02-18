@@ -7,10 +7,11 @@ import json
 from dotenv import load_dotenv; load_dotenv()
 from typing import Optional, Dict
 from pydantic import ValidationError
-from requests import Request, Response, Session
+import requests
+from requests import Response, Session
 
 ### Local Libraries
-# from ..
+# from ..logger import get_logger
 
 """
 Four committees:
@@ -25,7 +26,8 @@ Four committees:
 
 """
 
-_logger = get_logger(module_name="sec-api")
+# _logger = get_logger(module_name="sec-api")
+_logger = logging.getLogger(__name__)
 
 
 class SECUrls:
@@ -74,7 +76,7 @@ class SECApi:
         otherwise it raise an Exception.
         """
         if response.status_code > 299:
-            error = Request.HTTPError(response)
+            error = requests.HTTPError(response)
             _logger.error(error)
             if raise_error:
                 raise error
@@ -121,8 +123,7 @@ class SECApi:
             owner:str = '',
             include:str = '',
             count:str = 100,
-            action:str = 'getcurrent',
-                                           
+            action:str = 'getcurrent'                             
     ) -> Response:
         """
             Function will return SEC fillings from the 
@@ -168,6 +169,8 @@ def test():
     )
 
 
+def main_function():
+    test()
 
 
 if __name__ == "__main__":
